@@ -17,8 +17,10 @@ class YiiConditionalValidator extends CValidator{
 
     protected function validateAttribute($object, $attribute)
     {
-        $baseErrorsBackup=$object->getErrors($attribute);
-        $object->clearErrors($attribute);
+        /* @var $object CActiveRecord */
+
+        $baseErrorsBackup=$object->getErrors();
+        $object->clearErrors();
 
         $baseValidator=CValidator::createValidator($this->baseValidator, $object, $attribute, $this->baseValidatorParams);
         $baseValidator->validate($object, $attribute);
