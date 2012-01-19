@@ -47,6 +47,9 @@ class YiiConditionalValidator extends CValidator{
             return true;
         }
 
+        if(!isset($validatorData['validator']))
+            throw new CException('Yii Conditional Validator: you must specify a validator to each dependent attribute.');
+
         $validatorName   = $validatorData['validator'];
         $validatorParams = $validatorData['params'];
 
