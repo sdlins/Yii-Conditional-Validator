@@ -51,7 +51,7 @@ class YiiConditionalValidator extends CValidator{
             throw new CException('Yii Conditional Validator: you must specify a validator to each dependent attribute.');
 
         $validatorName   = $validatorData['validator'];
-        $validatorParams = $validatorData['params'];
+        $validatorParams = isset($validatorData['params']) ? $validatorData['params'] : array();
 
         $errorsBackup = $object->getErrors();
         $object->clearErrors();
