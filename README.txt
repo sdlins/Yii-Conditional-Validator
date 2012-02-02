@@ -1,6 +1,5 @@
 /* USING MARKDOWN SYNTAX */
 
-
 ##General Information
 
 Yii Conditional Validator validates any number of attributes if certain attribute validation is true.  
@@ -9,52 +8,30 @@ You can use any Yii Core Validator like usually you would do or any other Class 
 
 
 ##How it works
-YCV executes the `baseValidator` on a attribute and, if it validates (baseValidator returns true), YCV executes the `dependentAttributesAndValidators` specified in the rules options for that attribute.
+YCV executes the `validation` on a attribute and, if there are no validation errors, YCV executes the `dependentValidations` specified in the rules options for that attribute.
 
+> NOTE:
+This version (0.2.0) is **NOT** compatible with earlier versions!
 
 ##Syntax
 
-Short reference:
 ~~~
 [php]
-array(
-    'attribName', 
-    'path.to.YCV',
-    'baseValidator', 
-    'baseValidatorParams', //array
-    'dependentAttributesAndValidators', //array
+array('attribName', 'path.to.YCV',
+    'validation', //array, optional
+    'dependentValidations', //array
 )
 ~~~  
   
-
-Detailed reference:
-~~~
-[php]
-public function rules()
-{
-    return array(
-        ...,
-        array(
-            'attribute', //to be validated using 'baseValidator'
-            'application.extensions.YiiConditionalValidator',
-            'baseValidator'=>'compare', //any validator reference
-            'baseValidatorParams'=>array(...), //params to 'baseValidator'
-            'dependentAttributesAndValidators'=>array(
-                'someAttribute'=>array(
-                    'validator'=>'required', //any validator reference
-                    'params'=>array(...), //params to pass to 'validator'
-                ),
-            ),
-        ),
-        ...
-    )
-}
-~~~
+- `attribName`: [string, required] The name of the conditional attribute;
+- `path.to.YCV`: [string, required] The place where you unzipped the extension file. Defaults to `application.extensions.YiiConditionalValidator`;
+- `validation`: [array, optional] The conditional validation to be applyed to `attribName` (eg. `array('compare', 'compareValue'=>123)`). Dependent validations will be applyed **ONLY** if this validation has no errors. Defaults to `array('required')`;
+- `dependentValidations`: [array, required] The validations will be applyed if, and only if, `validation` has no errors (eg. `myAttrib=>array( array('required'), array('date', 'format'=>...) )`). You can define multiple attributes using `myAttrib1, myAttrib2, myAttribN...=>...` and/or you can define multiple validatons to those attributes (please, see examples);
 
 
 ##Examples
 
-**birthdate** and **city** are `required` only if **type of customer** is `TYPE_X`:
+**birthdate** and **city** are `required` only if **type_of_customer** is `TYPE_X`:
 ~~~
 [php]
 public function rules()
@@ -62,69 +39,78 @@ public function rules()
     return array(
         ...,
         array('type_of_customer', 'application.extensions.YiiConditionalValidator',
-            'baseValidator'=>'compare',
-            'baseValidatorParams'=>array('compareValue'=>TYPE_X),
-            'dependentAttributesAndValidators'=>array(
-                'birthdate, city'=>array('validator'=>'required')
+            'validation'=>array('compare', 'compareValue'=>TYPE_X),
+            'dependentValidations'=>array(
+                'birthdate, city'=>array(
+                	array('required'),
+        		),
             ),
         ),
 ~~~
 
-**birthdate** and **city** are `required` and **birthdate** must be a valid date only if *type_of_customer* is specified:
+**birthdate and city** are `required` and **birthdate** must be a valid date only if **type_of_customer** is specified:
 ~~~
 [php]
-public function rules()
-{
-    return array(
-      ...,
-      array('type_of_customer',
-        'application.extensions.YiiConditionalValidator',
-        'baseValidator'=>'required',
-        'dependentAttributesAndValidators'=>array(
+    array('type_of_customer', 'application.extensions.YiiConditionalValidator',
+        'validation'=>array('required'), //optional for required validator
+        'dependentValidations'=>array(
             'birthdate, city'=>array(
-                'validator'=>'required',
-                /* params to required validator */
-                'params'=>array(
-                    //using placeholders
-                    'message'=>'{dependentAttribute} is required if the {attribute} specified is {value}.',
-                ),
+                array('required', 'message'=>'{dependentAttribute} is required if the {attribute} specified is {value}.'),
             ),
             'birthdate'=>array(
-                'validator'=>'date', //since Yii 1.1.7
-                'params'=>array(...)
+                array('date', 'format'=>...),
             ),
         ),
     ),
 ~~~
 
-**info_attribute** must be a valid url only if *it itself* starts with 'http://' or must be a valid e-mail only if *it itself* contains an '@':
+**info_attribute** must be a valid url only if **it itself** starts with 'http://' OR it must be a valid e-mail only if **it itself** contains an '@':
 ~~~
 [php]
-public function rules()
-{
-    return array(
-    ...,
-        array(
-            'info_attribute', 
-            'application.extensions.YiiConditionalValidator',
-            'baseValidator'=>'match',
-            'baseValidatorParams'=>array('pattern'=>'/^http:\/\//'),
-            'dependentAttributesAndValidators'=>array(
-                'info_attribute'=>array('validator'=>'url'),
+        array('info_attribute', 'application.extensions.YiiConditionalValidator',
+            'validation'=>array('match', 'pattern'=>'/^http:\/\//'),
+            'dependentValidations'=>array(
+                'info_attribute'=>array(
+                	array('url'),
+            	),
             ),
         ),
-        array(
-            'info_attribute',
-            'application.extensions.YiiConditionalValidator',
-            'baseValidator'=>'match',
-            'baseValidatorParams'=>array('pattern'=>'/@/'),
-            'dependentAttributesAndValidators'=>array(
-                'info_attribute'=>array('validator'=>'email'),
+        array('info_attribute', 'application.extensions.YiiConditionalValidator',
+            'validation'=>array('match', 'pattern'=>'/@/'),
+            'dependentValidations'=>array(
+                'info_attribute'=>array(
+                	array('email'),
+            	),
             ),
         ),
 ~~~
 
 You can use any validator you want, mixing them to compound your rules.
+
+
+##Validation using related data
+
+> Note:
+This feature was not fully tested yet. Maybe not work on complex situations.
+
+You can use dot.notation on a validator attribute to check any data from a related model and use them in your validation rules.  
+  
+**Example:**  
+
+Assuming that `Customer` has a relation named `business`, you can check the `business.city` to define if `customer_phone` is required:
+~~~
+[php]
+        //Customer rules
+        array('business.city', 'application.extensions.YiiConditionalValidator',
+            'validation'=>array('in', 'range'=>array(CITY_X, CITY_Y, ...)),
+            'dependentValidations'=>array(
+                'customer_phone'=>array(
+                	array('required'),
+            	),
+            ),
+        ),
+~~~
+
 
 ##Placeholders for error messages
 - `{attribute}`: the attribute label being checked;
@@ -133,17 +119,7 @@ You can use any validator you want, mixing them to compound your rules.
 - `{dependentValue}`: the value of the dependent attribute being checked;
 
 
-##Validation using related data (coming soon)
-
-Some days more and it will be available a new option to allow use dot-notation on a validator attribute to check any data from a related model and use them in your validation rules.  
-
-Hypotethical example:  
-
-When creating a `Customer`, assuming that a business is selected, one might need check the `customer.business.city` (assuming `business` is the relation name in `Customer`) to validate if the customer.city is equal to business.city. 
-
-
 ##Installation
-
 1. Put YiiConditionalValidator.php in your application.extensions folder;
 
 
@@ -156,6 +132,10 @@ When creating a `Customer`, assuming that a business is selected, one might need
 - [Validators Wiki Reference](http://www.yiiframework.com/wiki/56/reference-model-rules-validation/)
 
 ##Change Log
+- Version 0.2.0
+    - Usage made easier, more simplyfied and more objective;
+    - New 'dot.notation' usage on attributes name (will be improoved on next versions);
+    - Some bug fixes;
 - Version 0.1.1
     - Throwns exception when a dependent validator is not specified;
     - Fixes bug when params of a dependent validator is not specified;
