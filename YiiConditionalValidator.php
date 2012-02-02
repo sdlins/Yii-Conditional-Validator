@@ -5,15 +5,13 @@
  *
  * @author Sidney Lins <solucoes@wmaior.com>
  * @copyright Copyright &copy; 2011 Sidney Lins
- * @version 0.1
+ * @version 0.2.0
  * @license New BSD Licence
  */
 class YiiConditionalValidator extends CValidator{
-    public $baseValidator='required';
-    public $baseValidatorParams=array();
-    public $dependentAttributesAndValidators=array();
-
-    public $message = "{dependentAttribute} is not valid.";
+    public $validation=array('required');
+    public $dependentValidations=array();
+    public $message = "{dependentAttribute} is invalid.";
 
     protected function validateAttribute($object, $attribute)
     {
@@ -34,8 +32,8 @@ class YiiConditionalValidator extends CValidator{
                 $relObject=$relObject->getRelated($relation);
         }
 
-        $baseValidator=CValidator::createValidator($this->baseValidator, $relObject, $relAttribute, $this->baseValidatorParams);
-        $baseValidator->validate($relObject, $relAttribute);
+        $validator=CValidator::createValidator($this->validation[0], $relObject, $relAttribute, array_slice($this->validation, 1, count($this->validation)-1));
+        $validator->validate($relObject, $relAttribute);
 
         if($relObject->hasErrors($relAttribute))
         {
@@ -44,53 +42,57 @@ class YiiConditionalValidator extends CValidator{
             return false;
         }
 
-        foreach($this->dependentAttributesAndValidators as $currentAttribute=>$currentValidatorData)
-            $this->validateDependentAttribute($object, $relObject, $attribute, $relAttribute, $currentAttribute, $currentValidatorData);
+        foreach($this->dependentValidations as $currentAttribute=>$validationData)
+        {
+            if(!is_array($validationData) || !count($validationData))
+                throw new CException('YiiConditionalValidator: dependentAttributesAndValidators must be an array and must have at least one value.');
+            $this->validateDependentAttribute($object, $relObject, $attribute, $relAttribute, $currentAttribute, $validationData);
+        }
 
         $object->addErrors($baseErrorsBackup);
     }
 
-    protected function validateDependentAttribute($object, $relObject, $attribute, $relAttribute, $dependentAttribute, $validatorData) {
+    protected function validateDependentAttribute($object, $relObject, $attribute, $relAttribute, $dependentAttribute, $validationData) {
         if(strpos($dependentAttribute, ',') !== false)
         {
             $attributes=array_map('trim', explode(',', $dependentAttribute));
             foreach($attributes as $dependentAttribute)
-                $this->validateDependentAttribute($object, $relObject, $attribute, $relAttribute, $dependentAttribute, $validatorData);
+                $this->validateDependentAttribute($object, $relObject, $attribute, $relAttribute, $dependentAttribute, $validationData);
             return true;
         }
 
-        if(!isset($validatorData['validator']))
-            throw new CException('Yii Conditional Validator: you must specify a validator to each dependent attribute.');
+        foreach($validationData as $validation)
+        {
+            $validatorName=$validation[0];
+            $validatorParams = array_slice($validation, 1, count($validation)-1);
 
-        $validatorName   = $validatorData['validator'];
-        $validatorParams = isset($validatorData['params']) ? $validatorData['params'] : array();
-
-        $errorsBackup = $object->getErrors();
-        $object->clearErrors();
-
-        $validator = CValidator::createValidator($validatorName, $object, $dependentAttribute, $validatorParams);
-        $validator->validate($object, $dependentAttribute);
-
-        if ($object->hasErrors($dependentAttribute)) {
+            $errorsBackup = $object->getErrors();
             $object->clearErrors();
 
-            if (isset($validatorParams['message']))
-                $message = $validatorParams['message'];
-            elseif ($validator->message)
-                $message = $validator->message;
-            else
-                $message = $this->message;
+            $validator = CValidator::createValidator($validatorName, $object, $dependentAttribute, $validatorParams);
+            $validator->validate($object, $dependentAttribute);
 
-            $object->addError($dependentAttribute, Yii::t(
-                        'yii', $message, array(
-                        '{attribute}' => $relObject->getAttributeLabel($relAttribute),
-                        '{value}' => $relObject->{$relAttribute},
-                        '{dependentAttribute}' => $object->getAttributeLabel($dependentAttribute),
-                        '{dependentValue}' => $object->{$dependentAttribute},
-                    )
-            ));
+            if ($object->hasErrors($dependentAttribute)) {
+                $object->clearErrors();
+
+                if (isset($validatorParams['message']))
+                    $message = $validatorParams['message'];
+                elseif ($validator->message)
+                    $message = $validator->message;
+                else
+                    $message = $this->message;
+
+                $object->addError($dependentAttribute, Yii::t(
+                            'yii', $message, array(
+                            '{attribute}' => $relObject->getAttributeLabel($relAttribute),
+                            '{value}' => $relObject->{$relAttribute},
+                            '{dependentAttribute}' => $object->getAttributeLabel($dependentAttribute),
+                            '{dependentValue}' => $object->{$dependentAttribute},
+                        )
+                ));
+            }
+            $object->addErrors($errorsBackup);
         }
-        $object->addErrors($errorsBackup);
     }
 }
 ?>
