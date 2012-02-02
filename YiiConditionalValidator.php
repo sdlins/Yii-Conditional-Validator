@@ -22,10 +22,22 @@ class YiiConditionalValidator extends CValidator{
         $baseErrorsBackup=$object->getErrors();
         $object->clearErrors();
 
-        $baseValidator=CValidator::createValidator($this->baseValidator, $object, $attribute, $this->baseValidatorParams);
-        $baseValidator->validate($object, $attribute);
+        $relAttribute=$attribute;
+        $relObject=$object;
 
-        if($object->hasErrors($attribute))
+        if(strpos($attribute, '.')!==false)
+        {
+            $parts=explode('.', $attribute);
+            $relAttribute=array_pop($parts);
+            $relations=$parts;
+            foreach($relations as $relation)
+                $relObject=$relObject->getRelated($relation);
+        }
+
+        $baseValidator=CValidator::createValidator($this->baseValidator, $relObject, $relAttribute, $this->baseValidatorParams);
+        $baseValidator->validate($relObject, $relAttribute);
+
+        if($relObject->hasErrors($relAttribute))
         {
             $object->clearErrors();
             $object->addErrors($baseErrorsBackup);
@@ -33,17 +45,17 @@ class YiiConditionalValidator extends CValidator{
         }
 
         foreach($this->dependentAttributesAndValidators as $currentAttribute=>$currentValidatorData)
-            $this->validateDependentAttribute($object, $attribute, $currentAttribute, $currentValidatorData);
+            $this->validateDependentAttribute($object, $relObject, $attribute, $relAttribute, $currentAttribute, $currentValidatorData);
 
         $object->addErrors($baseErrorsBackup);
     }
 
-    protected function validateDependentAttribute($object, $attribute, $dependentAttribute, $validatorData) {
+    protected function validateDependentAttribute($object, $relObject, $attribute, $relAttribute, $dependentAttribute, $validatorData) {
         if(strpos($dependentAttribute, ',') !== false)
         {
             $attributes=array_map('trim', explode(',', $dependentAttribute));
             foreach($attributes as $dependentAttribute)
-                $this->validateDependentAttribute($object, $attribute, $dependentAttribute, $validatorData);
+                $this->validateDependentAttribute($object, $relObject, $attribute, $relAttribute, $dependentAttribute, $validatorData);
             return true;
         }
 
@@ -71,8 +83,8 @@ class YiiConditionalValidator extends CValidator{
 
             $object->addError($dependentAttribute, Yii::t(
                         'yii', $message, array(
-                        '{attribute}' => $object->getAttributeLabel($attribute),
-                        '{value}' => $object->{$attribute},
+                        '{attribute}' => $relObject->getAttributeLabel($relAttribute),
+                        '{value}' => $relObject->{$relAttribute},
                         '{dependentAttribute}' => $object->getAttributeLabel($dependentAttribute),
                         '{dependentValue}' => $object->{$dependentAttribute},
                     )
