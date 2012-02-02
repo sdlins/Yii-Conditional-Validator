@@ -72,15 +72,15 @@ class YiiConditionalValidator extends CValidator{
             $validator = CValidator::createValidator($validatorName, $object, $dependentAttribute, $validatorParams);
             $validator->validate($object, $dependentAttribute);
 
-            if ($object->hasErrors($dependentAttribute)) {
+            if ($object->hasErrors($dependentAttribute))
+            {
+                $errorMessage=$object->getError($dependentAttribute);
                 $object->clearErrors();
 
                 if (isset($validatorParams['message']))
                     $message = $validatorParams['message'];
-                elseif ($validator->message)
-                    $message = $validator->message;
                 else
-                    $message = $this->message;
+                    $message = $errorMessage;
 
                 $object->addError($dependentAttribute, Yii::t(
                             'yii', $message, array(
