@@ -129,15 +129,15 @@ public function rules()
 
 ##Change Log
 [Version 1.0.0]
-    - Usage made yet more easier, simplyfied and objective;
-    - New `if`/`then` operators replace `validations`/`dependentValidations` making the use more natural;
-    - Code completely refactored and (almost) commented;
-    - Allows to use multiple attributes and/or validator combinations in the same set of YCV rule;
+- Usage made yet more easier, simplyfied and objective;
+- New `if`/`then` operators replace `validations`/`dependentValidations` making the use more natural;
+- Code completely refactored and (almost) commented;
+- Allows to use multiple attributes and/or validator combinations in the same set of YCV rule;
 
 [Version 0.2.0]
-    - Usage made easier, more simplyfied and more objective;
-    - New 'dot.notation' usage on attributes name (will be improoved on next versions);
-    - Some bug fixes;
+- Usage made easier, more simplyfied and more objective;
+- New 'dot.notation' usage on attributes name (will be improoved on next versions);
+- Some bug fixes;
 
 ##ToDo
 - Implement operator ('and', 'or') for multiple rules in `if` and in `then`;
