@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="YiiConditionalValidator : If-then validation rules on Yii Framework using core validators" />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>YiiConditionalValidator</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/sidtj/Yii-Conditional-Validator">View on GitHub</a>
+
+          <h1 id="project_title">YiiConditionalValidator</h1>
+          <h2 id="project_tagline">If-then validation rules on Yii Framework using core validators</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/sidtj/Yii-Conditional-Validator/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/sidtj/Yii-Conditional-Validator/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <blockquote>
+<p>Note: This version (1.0.0) is <strong>not</strong> compatible with earlier versions.</p>
+</blockquote>
+
+<h1>General Information</h1>
+
+<p>YiiConditionalValidator (YCV) validates some attributes depending on certains conditions (rules). You can use any core validator as you usually would do or any other class based or inline validator. An interesting feature is that you can use <code>dot.notation</code> in your rules to achieve data in <em>related models</em> and you can even use the own YiiConditionalValidator inside itself to perform more complex conditions;</p>
+
+<p>Basically, YCV executes the rules set in the param <code>if</code> and if there are no errors executes the rules set in the param <code>then</code>.</p>
+
+<blockquote>
+<p>Tip: <a href="https://github.com/sidtj/Yii-Conditional-Validator/">Fork me (and help me) on GitHub!</a>!</p>
+</blockquote>
+
+<h2>Syntax</h2>
+
+<pre><code>[php]
+array('safeAttribsList', 'path.to.YiiConditionalValidator',
+    'if' =&gt; array(
+        //rule1: array('attrX, attrY', 'required', ...)
+        //ruleN: ...
+    )
+    'then' =&gt; array(
+        //rule1: array('attrZ, attrG', 'required', ...)
+        //ruleN: ...
+    )
+)
+</code></pre>
+
+<ul>
+<li>
+<code>safeAttribsList</code>: The name of the attributes that should be turned safe (since Yii has no way to make dinamic validators to turn attributes safe);</li>
+<li>
+<code>path.to.YiiConditionalValidator</code>: In the most of cases will be <code>ext.YiiConditionalValidator</code>;</li>
+<li>
+<code>if</code>: (bidimensional array) The conditional rules to be validated. <em>Only</em> if they are all valid (i.e., have no errors) then the rules in <code>then</code> will be validated;</li>
+<li>
+<code>then</code>: (bidimensional array) The rules that will be validated <em>only</em> if there are no errors in rules of <code>if</code> param;</li>
+</ul><blockquote>
+<p>Note:
+Errors in the rules set in the param <code>if</code> are discarded after checking. Only errors in the rules set in param <code>then</code> are really kept.</p>
+</blockquote>
+
+<h2>Examples</h2>
+
+<p><code>If</code> <em>customer_type</em> is "active" <code>then</code> <em>birthdate</em> and <em>city</em> are <code>required</code>:</p>
+
+<pre><code>[php]
+public function rules()
+{
+    return array(
+        array('customer_type', 'ext.YiiConditionalValidator',
+            'if' =&gt; array(
+                array('customer_type', 'compare', 'compareValue'=&gt;"active"),
+            ),
+            'then' =&gt; array(
+                array('birthdate, city', 'required'),
+            ),
+        ),
+    );
+}
+</code></pre>
+
+<p><code>If</code> <em>customer_type</em> is "inactive" <code>then</code> <em>birthdate</em> and <em>city</em> are <code>required</code> <strong>and</strong> <em>city</em> must be "sao_paulo", "sumare" or "jacarezinho":</p>
+
+<pre><code>[php]
+public function rules()
+{
+    return array(
+        array('customer_type', 'ext.YiiConditionalValidator',
+            'if' =&gt; array(
+                array('customer_type', 'compare', 'compareValue'=&gt;"active"),
+            ),
+            'then' =&gt; array(
+                array('birthdate, city', 'required'),
+                array('city', 'in', 'range' =&gt; array("sao_paulo", "sumare", "jacarezinho")),
+            ),
+        ),
+    );
+}
+</code></pre>
+
+<p><code>If</code> <em>information</em> starts with 'http://' <strong>and</strong> has at least 24 chars length <code>then</code> the own <em>information</em> must be a valid url:</p>
+
+<pre><code>[php]
+public function rules()
+{
+    return array(
+        array('information', 'ext.YiiConditionalValidator',
+            'if' =&gt; array(
+                array('information', 'match', 'pattern'=&gt;'/^http:\/\//'),
+                array('information', 'length', 'min'=&gt;24, 'allowEmpty'=&gt;false),
+            ),
+            'then' =&gt; array(
+                array('information', 'url'),
+            ),
+        ),
+    );
+}
+</code></pre>
+
+<h2>Validation using related data</h2>
+
+<blockquote>
+<p>Note:
+This feature may not fit into situations too much complex.</p>
+</blockquote>
+
+<p>You can use <code>dot.notation</code> in attribute name to fetch data from a related model in your rules.</p>
+
+<p>Example:</p>
+
+<p>Assuming that Customer has a relation 'profile', you could check (in customer rules) <code>if</code> the <code>profile.username</code> is not empty before validate something:</p>
+
+<pre><code>[php]
+//Customer Model
+public function rules()
+{
+    return array(
+        array('information', 'ext.YiiConditionalValidator',
+            'if' =&gt; array(
+                //would only return true if profile.username is not empty
+                array('profile.username', 'required'),
+            ),
+            'then' =&gt; array(
+                array('someAttrib', 'someValidation', ...),
+            ),
+        ),
+    );
+}
+</code></pre>
+
+<h2>Installation</h2>
+
+<ol>
+<li>Put YiiConditionalValidator.php in your application.extensions folder;</li>
+</ol><h2>Requirements</h2>
+
+<ul>
+<li>Tested in Yii 1.1.10. Should work in others 1.10.* versions;</li>
+</ul><h2>Help and reference</h2>
+
+<ul>
+<li><a href="http://www.yiiframework.com/forum/index.php?/topic/27930-extension-yii-conditional-validator/">Forum</a></li>
+<li><a href="http://www.yiiframework.com/wiki/56/reference-model-rules-validation/">Fast Validators Reference</a></li>
+</ul><h2>Change Log</h2>
+
+<ul>
+<li>
+<p>Version 1.0.0</p>
+
+<ul>
+<li>Usage made yet more easier, simplyfied and objective;</li>
+<li>New <code>if</code>/<code>then</code> operators replace <code>validations</code>/<code>dependentValidations</code> making the use more natural;</li>
+<li>Code completely refactored and (almost) commented;</li>
+<li>Allows to use multiple attributes and/or validator combinations in the same set of YCV rule;</li>
+</ul>
+</li>
+<li>
+<p>Version 0.2.0</p>
+
+<ul>
+<li>Usage made easier, more simplyfied and more objective;</li>
+<li>New 'dot.notation' usage on attributes name (will be improoved on next versions);</li>
+<li>Some bug fixes;</li>
+</ul>
+</li>
+</ul><h2>To do</h2>
+
+<ul>
+<li>Implement operator ('and', 'or') for multiple rules in <code>if</code> and in <code>then</code>;</li>
+</ul>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">YiiConditionalValidator maintained by <a href="https://github.com/sidtj">sidtj</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
