@@ -1,144 +1,143 @@
-/* USING MARKDOWN SYNTAX */
-
-##General Information
-
-Yii Conditional Validator validates any number of attributes if certain attribute validation is true.  
-
-You can use any Yii Core Validator like usually you would do or any other Class Based/Inline validator. You can even use **CASCADE** validation using Yii Conditional Validator itself;
+> Note: This version (1.0.0) is **not** compatible with earlier versions.
 
 
-##How it works
-YCV executes the `validation` on a attribute and, if there are no validation errors, YCV executes the `dependentValidations` specified in the rules options for that attribute.
+#General Information
 
-> NOTE:
-This version (0.2.0) is **NOT** compatible with earlier versions!
+YiiConditionalValidator (YCV) validates some attributes depending on certains conditions (rules). You can use any core validator as you usually would do or any other class based or inline validator. An interesting feature is that you can use `dot.notation` in your rules to achieve data in *related models* and you can even use the own YiiConditionalValidator inside itself to perform more complex conditions;
+
+Basically, YCV executes the rules set in the param `if` and if there are no errors executes the rules set in the param `then`.
+
+> Tip: [Fork me (and help me) on GitHub!](https://github.com/sidtj/Yii-Conditional-Validator/)!
 
 ##Syntax
 
-~~~
-[php]
-array('attribName', 'path.to.YCV',
-    'validation', //array, optional
-    'dependentValidations', //array
+```php
+array('safeAttribsList', 'path.to.YiiConditionalValidator',
+    'if' => array(
+        //rule1: array('attrX, attrY', 'required', ...)
+        //ruleN: ...
+    )
+    'then' => array(
+        //rule1: array('attrZ, attrG', 'required', ...)
+        //ruleN: ...
+    )
 )
-~~~  
-  
-- `attribName`: [string, required] The name of the conditional attribute;
-- `path.to.YCV`: [string, required] The place where you unzipped the extension file. Defaults to `application.extensions.YiiConditionalValidator`;
-- `validation`: [array, optional] The conditional validation to be applyed to `attribName` (eg. `array('compare', 'compareValue'=>123)`). Dependent validations will be applyed **ONLY** if this validation has no errors. Defaults to `array('required')`;
-- `dependentValidations`: [array, required] The validations will be applyed if, and only if, `validation` has no errors (eg. `myAttrib=>array( array('required'), array('date', 'format'=>...) )`). You can define multiple attributes using `myAttrib1, myAttrib2, myAttribN...=>...` and/or you can define multiple validatons to those attributes (please, see examples);
+```
+
+- `safeAttribsList`: The name of the attributes that should be turned safe (since Yii has no way to make dinamic validators to turn attributes safe);
+- `path.to.YiiConditionalValidator`: In the most of cases will be `ext.YiiConditionalValidator`;
+- `if`: (bidimensional array) The conditional rules to be validated. *Only* if they are all valid (i.e., have no errors) then the rules in `then` will be validated;
+- `then`: (bidimensional array) The rules that will be validated *only* if there are no errors in rules of `if` param;
+
+> Note:
+Errors in the rules set in the param `if` are discarded after checking. Only errors in the rules set in param `then` are really kept.
 
 
 ##Examples
 
-**birthdate** and **city** are `required` only if **type_of_customer** is `TYPE_X`:
-~~~
-[php]
+`If` *customer_type* is "active" `then` *birthdate* and *city* are `required`:
+```php
 public function rules()
 {
     return array(
-        ...,
-        array('type_of_customer', 'application.extensions.YiiConditionalValidator',
-            'validation'=>array('compare', 'compareValue'=>TYPE_X),
-            'dependentValidations'=>array(
-                'birthdate, city'=>array(
-                	array('required'),
-        		),
+        array('customer_type', 'ext.YiiConditionalValidator',
+            'if' => array(
+                array('customer_type', 'compare', 'compareValue'=>"active"),
+            ),
+            'then' => array(
+                array('birthdate, city', 'required'),
             ),
         ),
-~~~
+    );
+}
+```
 
-**birthdate and city** are `required` and **birthdate** must be a valid date only if **type_of_customer** is specified:
-~~~
-[php]
-    array('type_of_customer', 'application.extensions.YiiConditionalValidator',
-        'validation'=>array('required'), //optional for required validator
-        'dependentValidations'=>array(
-            'birthdate, city'=>array(
-                array('required', 'message'=>'{dependentAttribute} is required if the {attribute} specified is {value}.'),
+`If` *customer_type* is "inactive" `then` *birthdate* and *city* are `required` **and** *city* must be "sao_paulo", "sumare" or "jacarezinho":
+```php
+public function rules()
+{
+    return array(
+        array('customer_type', 'ext.YiiConditionalValidator',
+            'if' => array(
+                array('customer_type', 'compare', 'compareValue'=>"active"),
             ),
-            'birthdate'=>array(
-                array('date', 'format'=>...),
-            ),
-        ),
-    ),
-~~~
-
-**info_attribute** must be a valid url only if **it itself** starts with 'http://' OR it must be a valid e-mail only if **it itself** contains an '@':
-~~~
-[php]
-        array('info_attribute', 'application.extensions.YiiConditionalValidator',
-            'validation'=>array('match', 'pattern'=>'/^http:\/\//'),
-            'dependentValidations'=>array(
-                'info_attribute'=>array(
-                	array('url'),
-            	),
+            'then' => array(
+                array('birthdate, city', 'required'),
+                array('city', 'in', 'range' => array("sao_paulo", "sumare", "jacarezinho")),
             ),
         ),
-        array('info_attribute', 'application.extensions.YiiConditionalValidator',
-            'validation'=>array('match', 'pattern'=>'/@/'),
-            'dependentValidations'=>array(
-                'info_attribute'=>array(
-                	array('email'),
-            	),
+    );
+}
+```
+
+`If` *information* starts with 'http://' **and** has at least 24 chars length `then` the own *information* must be a valid url:
+```php
+public function rules()
+{
+    return array(
+        array('information', 'ext.YiiConditionalValidator',
+            'if' => array(
+                array('information', 'match', 'pattern'=>'/^http:\/\//'),
+                array('information', 'length', 'min'=>24, 'allowEmpty'=>false),
+            ),
+            'then' => array(
+                array('information', 'url'),
             ),
         ),
-~~~
-
-You can use any validator you want, mixing them to compound your rules.
-
+    );
+}
+```
 
 ##Validation using related data
 
 > Note:
-This feature was not fully tested yet. Maybe not work on complex situations.
+This feature may not fit into situations too much complex.
 
-You can use dot.notation on a validator attribute to check any data from a related model and use them in your validation rules.  
-  
-**Example:**  
+You can use `dot.notation` in attribute name to fetch data from a related model in your rules.
 
-Assuming that `Customer` has a relation named `business`, you can check the `business.city` to define if `customer_phone` is required:
-~~~
-[php]
-        //Customer rules
-        array('business.city', 'application.extensions.YiiConditionalValidator',
-            'validation'=>array('in', 'range'=>array(CITY_X, CITY_Y, ...)),
-            'dependentValidations'=>array(
-                'customer_phone'=>array(
-                	array('required'),
-            	),
+Example:
+
+Assuming that Customer has a relation 'profile', you could check (in customer rules) `if` the `profile.username` is not empty before validate something:
+```php
+//Customer Model
+public function rules()
+{
+    return array(
+        array('information', 'ext.YiiConditionalValidator',
+            'if' => array(
+                //would only return true if profile.username is not empty
+                array('profile.username', 'required'),
+            ),
+            'then' => array(
+                array('someAttrib', 'someValidation', ...),
             ),
         ),
-~~~
-
-
-##Placeholders for error messages
-- `{attribute}`: the attribute label being checked;
-- `{value}`: the value of the attribute being checked;
-- `{dependentAttribute}`: the dependent attribute label being checked;
-- `{dependentValue}`: the value of the dependent attribute being checked;
+    );
+}
+```
 
 
 ##Installation
 1. Put YiiConditionalValidator.php in your application.extensions folder;
 
-
 ##Requirements
-- Tested in Yii 1.1.7. Should work ok with earlier versions;
+- Tested in Yii 1.1.10. Should work in others 1.10.* versions;
 
-
-##Resources
-- [Forum Discussion](http://www.yiiframework.com/forum/index.php?/topic/27930-extension-yii-conditional-validator/)
-- [Validators Wiki Reference](http://www.yiiframework.com/wiki/56/reference-model-rules-validation/)
+##Help and reference
+- [Forum](http://www.yiiframework.com/forum/index.php?/topic/27930-extension-yii-conditional-validator/)
+- [Fast Validators Reference](http://www.yiiframework.com/wiki/56/reference-model-rules-validation/)
 
 ##Change Log
-- Version 0.2.0
+[Version 1.0.0]
+    - Usage made yet more easier, simplyfied and objective;
+    - New `if`/`then` operators replace `validations`/`dependentValidations` making the use more natural;
+    - Code completely refactored and (almost) commented;
+    - Allows to use multiple attributes and/or validator combinations in the same set of YCV rule;
+
+[Version 0.2.0]
     - Usage made easier, more simplyfied and more objective;
     - New 'dot.notation' usage on attributes name (will be improoved on next versions);
     - Some bug fixes;
-- Version 0.1.1
-    - Throwns exception when a dependent validator is not specified;
-    - Fixes bug when params of a dependent validator is not specified;
-    - Fixes bug concerning to backup/recover of errors of the model;
-- Version 0.1
-    First Version;
+
+##ToDo
+- Implement operator ('and', 'or') for multiple rules in `if` and in `then`;
