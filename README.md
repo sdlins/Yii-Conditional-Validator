@@ -1,7 +1,8 @@
+
 > Note: This version (1.0.0) is **not** compatible with earlier versions.
 
 
-#General Information
+# General Information
 
 YiiConditionalValidator (YCV) validates some attributes depending on certains conditions (rules). You can use any core validator as you usually would do or any other class based or inline validator. An interesting feature is that you can use `dot.notation` in your rules to achieve data in *related models* and you can even use the own YiiConditionalValidator inside itself to perform more complex conditions;
 
@@ -9,9 +10,9 @@ Basically, YCV executes the rules set in the param `if` and if there are no erro
 
 > Tip: [Fork me (and help me) on GitHub!](https://github.com/sidtj/Yii-Conditional-Validator/)!
 
-##Syntax
+## Syntax
 
-```php
+```[php]
 array('safeAttribsList', 'path.to.YiiConditionalValidator',
     'if' => array(
         //rule1: array('attrX, attrY', 'required', ...)
@@ -29,14 +30,13 @@ array('safeAttribsList', 'path.to.YiiConditionalValidator',
 - `if`: (bidimensional array) The conditional rules to be validated. *Only* if they are all valid (i.e., have no errors) then the rules in `then` will be validated;
 - `then`: (bidimensional array) The rules that will be validated *only* if there are no errors in rules of `if` param;
 
-> Note:
-Errors in the rules set in the param `if` are discarded after checking. Only errors in the rules set in param `then` are really kept.
+> Note: Errors in the rules set in the param `if` are discarded after checking. Only errors in the rules set in param `then` are really kept.
 
 
-##Examples
+## Examples
 
 `If` *customer_type* is "active" `then` *birthdate* and *city* are `required`:
-```php
+```[php]
 public function rules()
 {
     return array(
@@ -53,7 +53,7 @@ public function rules()
 ```
 
 `If` *customer_type* is "inactive" `then` *birthdate* and *city* are `required` **and** *city* must be "sao_paulo", "sumare" or "jacarezinho":
-```php
+```[php]
 public function rules()
 {
     return array(
@@ -71,7 +71,7 @@ public function rules()
 ```
 
 `If` *information* starts with 'http://' **and** has at least 24 chars length `then` the own *information* must be a valid url:
-```php
+```[php]
 public function rules()
 {
     return array(
@@ -98,7 +98,7 @@ You can use `dot.notation` in attribute name to fetch data from a related model 
 Example:
 
 Assuming that Customer has a relation 'profile', you could check (in customer rules) `if` the `profile.username` is not empty before validate something:
-```php
+```[php]
 //Customer Model
 public function rules()
 {
@@ -117,17 +117,18 @@ public function rules()
 ```
 
 
-##Installation
+## Installation
+
 1. Put YiiConditionalValidator.php in your application.extensions folder;
 
-##Requirements
+## Requirements
 - Tested in Yii 1.1.10. Should work in others 1.10.* versions;
 
-##Help and reference
+## Help and reference
 - [Forum](http://www.yiiframework.com/forum/index.php?/topic/27930-extension-yii-conditional-validator/)
 - [Fast Validators Reference](http://www.yiiframework.com/wiki/56/reference-model-rules-validation/)
 
-##Change Log
+## Change Log
 [Version 1.0.0]
 - Usage made yet more easier, simplyfied and objective;
 - New `if`/`then` operators replace `validations`/`dependentValidations` making the use more natural;
